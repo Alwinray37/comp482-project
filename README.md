@@ -57,3 +57,7 @@ java Solution
 
 ## Notes: 
 
+Whenever youre starting, pull latest version if necessary:
+```bash
+git pull origin main
+```
