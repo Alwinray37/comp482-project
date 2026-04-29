@@ -33,6 +33,7 @@ PSEUDOCODE:
 7. push (0, s, 0) into PQ
 
 8. while PQ not empty:
+```java
 	 d, u, used = PQ.pop()
 	 if d > dist[used][u]:
 		 continue
@@ -47,8 +48,8 @@ PSEUDOCODE:
 			 if dist[1][v] > newd:
 				 dist[1][v] = newd
 				 PQ.push(newd, v, 1)
-
-9. answer = min(dist[0][t], dist[1][t])
+```
+9.  answer = min(dist[0][t], dist[1][t])
 10. if answer == INF: print -1 else print answer
 
 Notes:
