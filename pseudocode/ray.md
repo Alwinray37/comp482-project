@@ -21,38 +21,37 @@ We model each intersection with two states: pass not used (layer 0) and pass use
 Run Dijkstra on the 2-layer graph of size 2*n.
 
 PSEUDOCODE:
+// Initialization
+read n, m
+read s, t
+adj = list of lists, size n+1
+for i from 1 to m:
+    read u, v, w
+    adj[u].append( (v, w) )   // directed edge u -> v
 
-1. Read n, m, s, t
-2. Create adjacency list: adj[u] = list of (v, w) for each directed edge u->v with weight w
+INF = very large number
+dist[1..n] = INF
+dist[s] = 0
 
-3. Let INF = large (e.g., 10^18)
-4. Create dist[2][n+1] and initialize all to INF
-5. dist[0][s] = 0   // start at s with pass unused
+pq = empty min-heap
+push (0, s) into pq
 
-6. Priority queue PQ of tuples (distance, node, used) ordered by distance
-7. push (0, s, 0) into PQ
+// Main loop
+while pq is not empty:
+    (d, u) = pop from pq      // node with smallest distance so far
 
-8. while PQ not empty:
-```java
-	 d, u, used = PQ.pop()
-	 if d > dist[used][u]:
-		 continue
-	 for each (v, w) in adj[u]:
-		 // 1) travel without using pass
-		 if dist[used][v] > d + w:
-			 dist[used][v] = d + w
-			 PQ.push(dist[used][v], v, used)
-		 // 2) if pass not yet used, consider using it on this road
-		 if used == 0:
-			 newd = d + floor(w / 2)
-			 if dist[1][v] > newd:
-				 dist[1][v] = newd
-				 PQ.push(newd, v, 1)
-```
-9.  answer = min(dist[0][t], dist[1][t])
-10. if answer == INF: print -1 else print answer
+    if d > dist[u]:
+        continue              // stale entry, skip
 
-Notes:
-- Use 64-bit integers for distances.
-- floor(w/2) is integer division: w / 2.
-- Time complexity: O((n + m) log n) using binary heap.
+    // Relax all outgoing edges from u
+    for each (v, w) in adj[u]:    // only u -> v, no reverse edge unless given
+        newDist = d + w
+        if newDist < dist[v]:
+            dist[v] = newDist
+            push (newDist, v) into pq
+
+// Result for single-source single-target
+if dist[t] == INF:
+    print -1      // unreachable
+else:
+    print dist[t]
