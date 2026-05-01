@@ -55,6 +55,29 @@ Run the program:
 java Solution
 ```
 
+Run Tests: 
+paste this in your terminal
+update 'RaySolution' to your Solution.java filename
+run all tests:
+```bash
+for f in tests/*.in; do
+  name="${f%.in}"
+  actual=$(java -cp src RaySolution < "$f" 2>/dev/null)
+  expected=$(cat "${name}.out")
+  if [ "$actual" = "$expected" ]; then
+    echo "PASS: $name"
+  else
+    echo "FAIL: $name  (got: $actual, expected: $expected)"
+  fi
+done
+```
+
+Run one test
+```bash
+java -cp src RaySolution < tests/[testname].in
+
+```
+
 ## Notes: 
 
 Whenever youre starting, pull latest version if necessary:
