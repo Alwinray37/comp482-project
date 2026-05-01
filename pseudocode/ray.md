@@ -5,223 +5,308 @@ You are given a directed road network with n intersections and m one-way roads. 
 
 Input Format
 
-• First line: n m s t • Next m lines: u v w • Road u -> v is directed and has travel time w
+- First line: n m s t 
+- Next m lines: u v w 
+- Road u -> v is directed and has travel time w
 
 Constraints
 
-• 1 ≤ n ≤ 2 × 10^5 • 1 ≤ m ≤ 3 × 10^5 • 1 ≤ w ≤ 10^9 • 1 ≤ s, t ≤ n • Expected solution: O((n + m) log n) or O(m log n)
+- 1 ≤ n ≤ 2 × 10^5 
+- 1 ≤ m ≤ 3 × 10^5 
+- 1 ≤ w ≤ 10^9 • 1 ≤ s, t ≤ n 
+- Expected solution: O((n + m) log n) or O(m log n)
 
 Output Format
 
 Print a single integer: the minimum travel time from s to t after using the Priority Pass on at most one road. If no route exists, print -1.
 
+## Approach
+- using modified Dijkstra's Algo that tracks two versions of every intersection/path
+  - Without Priority Pass (PP)
+  - With Priority Pass 
+
+Initialization:
+- set distance[s][0] = 0 -> starting node with cost 0
+- every other node has MAX_VALUE to represent infinity
+- add starting state to priority queue 
+
+Main Loop:
+- process every reachable state until the heap is empty 
+- pull the state with lowest travel time
+- stale check -> if current node's travelTime is greater than distance saved, then continue. this means we went through this already
+- For each neighbor:
+  - go to neighbor without using PP, update node total path distance 
+  - go to neighbor with using PP, update node total path distance
+
+Return the answer: minimum(distances[target node][0], distances[target node][1])
+
 ## Algorithm (Pseudocode)
+
 PSEUDOCODE:
-// Initialization
-read n, m
-read s, t
-adj = list of lists, size n+1
-for i from 1 to m:
-    read u, v, w
-    adj[u].append( (v, w) )   // directed edge u -> v
 
-INF = very large number
-dist[1..n] = INF
-dist[s] = 0
+```bash 
+CLASSES:
+    Node(intersection, travelTime)           // represents a directed road/edge
+    State(intersection, travelTime, ppUsed)  // represents a position + pass status in the heap
 
-pq = empty min-heap
-push (0, s) into pq
 
-// Main loop
-while pq is not empty:
-    (d, u) = pop from pq      // node with smallest distance so far
+DIJKSTRA(roadNetwork, n, s, t):
 
-    if d > dist[u]:
-        continue              // stale entry, skip
+    // log input variables (debug)
+    print n, s, t
+    print adjacency list for each intersection 1..n
 
-    // Relax all outgoing edges from u
-    for each (v, w) in adj[u]:    // only u -> v, no reverse edge unless given
-        newDist = d + w
-        if newDist < dist[v]:
-            dist[v] = newDist
-            push (newDist, v) into pq
+    // 2D distance table
+    // distances[i][0] = best cost to reach intersection i WITHOUT having used PP
+    // distances[i][1] = best cost to reach intersection i AFTER having used PP
+    distances[0..n][0..1] = INFINITY
+    distances[s][0] = 0
 
-// Result for single-source single-target
-if dist[t] == INF:
-    print -1      // unreachable
-else:
-    print dist[t]\
+    minHeap = priority queue ordered by travelTime ascending
+    minHeap.push(State(intersection=s, travelTime=0, ppUsed=false))
+
+    iteration = 0
+
+    while minHeap is not empty:
+        iteration++
+        current = minHeap.pop()                        // extract lowest cost state
+        stateIndex = current.ppUsed ? 1 : 0
+
+        // stale check: skip if a cheaper path for this (intersection, ppUsed) was already processed
+        if current.travelTime > distances[current.intersection][stateIndex]:
+            continue
+
+        for each neighbor of current.intersection:
+            roadTime = neighbor.travelTime
+
+            // Option 1: travel this road WITHOUT using PP
+            nextStateIndex = current.ppUsed ? 1 : 0   // pass status unchanged
+            costWithoutPP = current.travelTime + roadTime
+            if costWithoutPP < distances[neighbor.intersection][nextStateIndex]:
+                distances[neighbor.intersection][nextStateIndex] = costWithoutPP
+                minHeap.push(State(neighbor.intersection, costWithoutPP, current.ppUsed))
+
+            // Option 2: use PP on this road (only available if PP not yet used)
+            if not current.ppUsed:
+                discountedCost = roadTime / 2          // floor division
+                costWithPP = current.travelTime + discountedCost
+                if costWithPP < distances[neighbor.intersection][1]:
+                    distances[neighbor.intersection][1] = costWithPP
+                    minHeap.push(State(neighbor.intersection, costWithPP, ppUsed=true))
+
+    resultNoPP   = distances[t][0]
+    resultWithPP = distances[t][1]
+
+    // log final distances (debug)
+    print resultNoPP, resultWithPP
+
+    best = min(resultNoPP, resultWithPP)
+    return best == INFINITY ? -1 : best
+
+
+MAIN:
+    read n, m, s, t
+
+    roadNetwork = adjacency list of size n+1, all empty (1-indexed)
+    for each of m roads:
+        read u, v, w
+        roadNetwork[u].add(Node(intersection=v, travelTime=w))
+
+    result = DIJKSTRA(roadNetwork, n, s, t)
+    print result
+```
 
 <!-- Actual Code -->
 ```java
-import java.io.*; 
 import java.util.*;
+import java.io.*;
 
-// using dijktras algo 
-public class Solution {
+// using dijktras algo
+public class Solution { // update this to "Solution" before submitting
+
     // node representing each vertex
     static class Node {
         int intersection; // value
         int travelTime; // weight
 
-        Node(int intersection, int travelTime){
+        Node(int intersection, int travelTime) {
             this.intersection = intersection;
             this.travelTime = travelTime;
         }
     }
+
+    // state to track Priority Pass (PP) has been used
+    static class State {
+        int intersection; // current intersection
+        int travelTime; // total travel time to reach this intersection
+        boolean ppUsed; // whether PP has been used
+
+        State(int intersection, int travelTime, boolean ppUsed) {
+            this.intersection = intersection;
+            this.travelTime = travelTime;
+            this.ppUsed = ppUsed;
+        }
+    }
+
     // dijktras algo
-    public int dijkstra(List<List<Node>> roadNetwork, int n, int s, int t){
-        // this method will run dijkstras algorithm 
+    public int dijkstra(List<List<Node>> roadNetwork, int n, int s, int t) {
+        // this method will run dijkstras algorithm
         // n = number of intersections
         // s = starting intersection
         // t = destination intersection
         // roadNetwork = adjacency list of the directed road network
         // Returns minimum travel time from s to t
-        System.out.println("\n=== DIJKSTRA'S ALGORITHM START ===");
-        System.out.println("Starting intersection: " + s);
-        System.out.println("Destination intersection: " + t);
-        System.out.println("Number of intersections: " + n);
+
+        // confirm input variables
+        System.err.println("Input Variables:");
+        System.err.println("  n (intersections) = " + n);
+        System.err.println("  s (start) = " + s);
+        System.err.println("  t (end) = " + t);
+
+        // confirm adjacency list
+        System.err.println("[Adjacency List]");
+        for (int i = 1; i <= n; i++) {
+            System.err.print("  " + i + " -> ");
+            if (roadNetwork.get(i).isEmpty()) {
+                System.err.println("(none)");
+            } else {
+                for (Node neighbor : roadNetwork.get(i)) {
+                    System.err.print(neighbor.intersection + "(w:" + neighbor.travelTime + ") ");
+                }
+                System.err.println();
+            }
+        }
 
         // initializing the distance array
-        int[] distances = new int[n+1];
+        // distances[intersection][passUsed]
+        // distances[i][0] = best cost to reach i WITHOUT using pass
+        // distances[i][1] = best cost to reach i AFTER using pass
+        int[][] distances = new int[n + 1][2];
 
-        // setting all distances to infinity 
-        for(int i = 0; i <=n; i++){
-            distances[i] = Integer.MAX_VALUE;
+        // setting all distances to infinity
+        for (int i = 0; i <= n; i++) {
+            distances[i][0] = Integer.MAX_VALUE;
+            distances[i][1] = Integer.MAX_VALUE;
         }
 
         // distance from source to itself is 0
-        distances[s] = 0;
-        // logging checks
-        System.out.println("\nInitialized distances array:");
-        for (int i = 1; i <= n; i++) {
-            if (distances[i] == Integer.MAX_VALUE) {
-                System.out.println("  distances[" + i + "] = INFINITY");
-            } else {
-                System.out.println("  distances[" + i + "] = " + distances[i]);
-            }
-        }
-        System.out.println("\nRoad network (adjacency list):");
-        for (int i = 1; i <= n; i++) {
-            System.out.print("  Intersection " + i + " -> ");
-            if (roadNetwork.get(i).isEmpty()) {
-                System.out.println("(no outgoing roads)");
-            } else {
-                for (Node neighbor : roadNetwork.get(i)) {
-                    System.out.print("[" + neighbor.intersection + " (time: " + neighbor.travelTime + ")] ");
-                }
-                System.out.println();
-            }
-        }
+        distances[s][0] = 0;
 
         // creating a priority queue min-heap
-        PriorityQueue<Node> minHeap = new PriorityQueue<>(
+        // the queue will store states, and we want to prioritize states with lower travel time
+        PriorityQueue<State> minHeap = new PriorityQueue<>(
             (a, b) -> Integer.compare(a.travelTime, b.travelTime)
         );
-        // add the starting node with dist 0
-        minHeap.offer(new Node(s, 0));
 
-        // main loop, process interections 
+        // add the starting node with dist 0
+        minHeap.offer(new State(s, 0, false));
+
+        // main loop, process interections
         int iteration = 0;
 
-        while(!minHeap.isEmpty()){ // while min-heap is not empty
+        while (!minHeap.isEmpty()) { // while min-heap is not empty
             iteration++;
-            System.out.println("\n--- Iteration " + iteration + " ---");
 
-            // extracting the intersection with MINIMUM travel time from queue
-            Node current = minHeap.poll();
+            // extracting the intersection with minimum travel time from queue
+            State current = minHeap.poll();
             int currentIntersection = current.intersection;
             int currentDistance = current.travelTime;
+            boolean currentPPUsed = current.ppUsed; 
 
-            // log
-            System.out.println("Processing intersection: " + currentIntersection);
-            System.out.println("  Current shortest distance from " + s + " to " + currentIntersection + ": " + currentDistance);
-            
+            // determining which distance array to check based on whether PP has been used
+            int stateIndex = currentPPUsed ? 1 : 0;
+
             // skip if we already found a better path
             // This happens when the same intersection is in the queue multiple times
-            if (currentDistance > distances[currentIntersection]) {
-                System.out.println("SKIP: We already found a better path to " + currentIntersection + " (distance: " + distances[currentIntersection] + ")");
+            if (currentDistance > distances[currentIntersection][stateIndex]) {
+                // System.err.println("[ITER " + iteration + "] SKIP intersection " + currentIntersection + " (stale cost " + currentDistance + ", best is " + distances[currentIntersection][stateIndex] + ")");
                 continue;
             }
 
-            System.out.println("  Checking outgoing roads from intersection " + currentIntersection + ":");
-            
+            // exploring all neghibors of the current intersection
             List<Node> neighbors = roadNetwork.get(currentIntersection);
-            if (neighbors.isEmpty()) {
-                System.out.println("    (no outgoing roads)");
-            } else {
-                for ( Node neighbor : neighbors){
-                    int nextIntersection = neighbor.intersection;
-                    int roadTime = neighbor.travelTime;
+            for (Node neighbor : neighbors) {
+                int nextIntersection = neighbor.intersection;
+                int roadTime = neighbor.travelTime;
 
-                    // log
-                    System.out.println("    -> Road to intersection " + nextIntersection + " (travel time: " + roadTime + ")");
+                // calculating the toatl travel time if we go through current intersetion
+                int costWithoutPP = currentDistance + roadTime;
+                int nextStateIndex = currentPPUsed ? 1 : 0;
+                
+                if(costWithoutPP < distances[nextIntersection][nextStateIndex]) {
+                    // if this path is better than the best known path to nextIntersection without using PP
+                    distances[nextIntersection][nextStateIndex] = costWithoutPP;
+                    minHeap.offer(new State(nextIntersection, costWithoutPP, currentPPUsed));
+                }
 
-                    // calculating the toatl travel time if we go through current intersetion
-                    int newDistance = distances[currentIntersection] + roadTime; 
-                    // log
-                    System.out.println("      Total time via " + currentIntersection + ": " + distances[currentIntersection] + " + " + roadTime + " = " + newDistance);
-                    System.out.println("      Current best to " + nextIntersection + ": " + 
-                                    (distances[nextIntersection] == Integer.MAX_VALUE ? "INFINITY" : distances[nextIntersection]));
-                    
-                    // relaxation, if we found a shorter paath, update
-                    if(newDistance < distances[nextIntersection]){
-                        distances[nextIntersection] = newDistance; 
-                        minHeap.offer(new Node(nextIntersection, newDistance));
+                // take this road with useing PP if we haven't used it yet
+                if (!currentPPUsed) {
+                    int discountedCost = (roadTime / 2); // using PP on this road
+                    int costWithPP = currentDistance + discountedCost;
+
+                    if(costWithPP < distances[nextIntersection][1]) {
+                        // if this path is better than the best known path to nextIntersection with using PP
+                        distances[nextIntersection][1] = costWithPP;
+                        minHeap.offer(new State(nextIntersection, costWithPP, true));
                     }
                 }
             }
         }
-        System.out.println("\n=== LOOP FINISHED ===");
-        System.out.println("Final distances array:");
-        for (int i = 1; i <= n; i++) {
-            System.out.println("  distances[" + i + "] = " + 
-                            (distances[i] == Integer.MAX_VALUE ? "INFINITY (unreachable)" : distances[i]));
-        }
 
+        // result 
+        int resultWithNoPP = distances[t][0];
+        int resultWithPP = distances[t][1];
+
+        // confirm final result
+        System.err.println("  dist[" + t + "][0] (no pass) = " + (resultWithNoPP == Integer.MAX_VALUE ? "UNREACHABLE" : resultWithNoPP));
+        System.err.println("  dist[" + t + "][1] (with pass) = " + (resultWithPP == Integer.MAX_VALUE ? "UNREACHABLE" : resultWithPP));
+        
         // return the result
-        System.out.println("Looking for shortest distance to intersection " + t);
-        if (distances[t] == Integer.MAX_VALUE) {
-            System.out.println("Result: " + t + " is UNREACHABLE from " + s);
-            System.out.println("Returning: -1");
-            return -1;
-        } else {
-            System.out.println("Result: Shortest travel time from " + s + " to " + t + " is: " + distances[t]);
-            System.out.println("Returning: " + distances[t]);
-            return distances[t];
-        }
+        return Math.min(resultWithNoPP, resultWithPP) == Integer.MAX_VALUE ? -1 : Math.min(resultWithNoPP, resultWithPP);
     }
 
-    // main func
+    // main function
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in); // might need to change this ti STDIN
+        Scanner sc = new Scanner(System.in);
 
         int n = sc.nextInt(); // number of intersections/vertices
-        int m = sc.nextInt(); // number of one way roads 
+        int m = sc.nextInt(); // number of one way roads
         int s = sc.nextInt(); // start node
         int t = sc.nextInt(); // end node
 
         // building the adjecency list for the road network
-        List<List<Node>> roadNetwork = new ArrayList<>(); 
-        for (int i = 0; i <= n; i++){
+        List<List<Node>> roadNetwork = new ArrayList<>();
+        for (int i = 0; i <= n; i++) {
             roadNetwork.add(new ArrayList<>());
         }
+
         // read m roads and add to the roadNetwork
-        for (int i = 0; i < m; i++){
-            int u = sc.nextInt();      // from intersection u
-            int v = sc.nextInt();      // to intersection v
-            int w = sc.nextInt();      // with travel time w
+        for (int i = 0; i < m; i++) {
+            int u = sc.nextInt(); // from intersection u
+            int v = sc.nextInt(); // to intersection v
+            int w = sc.nextInt(); // with travel time w
             roadNetwork.get(u).add(new Node(v, w));
         }
 
         Solution sol = new Solution();
         int result = sol.dijkstra(roadNetwork, n, s, t);
         System.out.println(result);
+        sc.close();
     }
 }
+
 ```
 
 ## Edge Cases
+
+```bash 
+4 4 1 4 
+1 2 100 
+2 4 1 
+1 3 50 
+3 4 50
+
+```
 
 ### Start is already the destination
 
