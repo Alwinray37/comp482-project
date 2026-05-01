@@ -30,7 +30,7 @@ Initialization:
 - every other node has MAX_VALUE to represent infinity
 - add starting state to priority queue 
 
-Main Loop:
+Main Loop in dijkstra:
 - process every reachable state until the heap is empty 
 - pull the state with lowest travel time
 - stale check -> if current node's travelTime is greater than distance saved, then continue. this means we went through this already
@@ -41,8 +41,6 @@ Main Loop:
 Return the answer: minimum(distances[target node][0], distances[target node][1])
 
 ## Algorithm (Pseudocode)
-
-PSEUDOCODE:
 
 ```bash 
 CLASSES:
@@ -68,7 +66,6 @@ DIJKSTRA(roadNetwork, n, s, t):
     iteration = 0
 
     while minHeap is not empty:
-        iteration++
         current = minHeap.pop()                        // extract lowest cost state
         stateIndex = current.ppUsed ? 1 : 0
 
@@ -119,10 +116,9 @@ MAIN:
 <!-- Actual Code -->
 ```java
 import java.util.*;
-import java.io.*;
 
 // using dijktras algo
-public class Solution { // update this to "Solution" before submitting
+public class RaySolution { // update this to "Solution" before submitting
 
     // node representing each vertex
     static class Node {
@@ -202,16 +198,15 @@ public class Solution { // update this to "Solution" before submitting
         minHeap.offer(new State(s, 0, false));
 
         // main loop, process interections
-        int iteration = 0;
-
         while (!minHeap.isEmpty()) { // while min-heap is not empty
-            iteration++;
-
-            // extracting the intersection with minimum travel time from queue
+            // extracting the intersection/node with minimum travel time from queue
             State current = minHeap.poll();
             int currentIntersection = current.intersection;
             int currentDistance = current.travelTime;
             boolean currentPPUsed = current.ppUsed; 
+
+            // var check
+            System.err.println("\nCurrent Intersection/node: " + currentIntersection + " Current Distance: " + currentDistance + " PP Used: " + currentPPUsed);
 
             // determining which distance array to check based on whether PP has been used
             int stateIndex = currentPPUsed ? 1 : 0;
@@ -219,37 +214,53 @@ public class Solution { // update this to "Solution" before submitting
             // skip if we already found a better path
             // This happens when the same intersection is in the queue multiple times
             if (currentDistance > distances[currentIntersection][stateIndex]) {
-                // System.err.println("[ITER " + iteration + "] SKIP intersection " + currentIntersection + " (stale cost " + currentDistance + ", best is " + distances[currentIntersection][stateIndex] + ")");
                 continue;
             }
 
-            // exploring all neghibors of the current intersection
+            // exploring all neghibors nodes of the current intersection/state
             List<Node> neighbors = roadNetwork.get(currentIntersection);
-            for (Node neighbor : neighbors) {
-                int nextIntersection = neighbor.intersection;
-                int roadTime = neighbor.travelTime;
+            // debug log
+            System.err.println("  Exploring neighbors of intersection " + currentIntersection);
 
-                // calculating the toatl travel time if we go through current intersetion
-                int costWithoutPP = currentDistance + roadTime;
+            // for each neighber in neighbors of current intersection
+            for (Node neighbor : neighbors) {
+                int neighborIntersection = neighbor.intersection;
+                int neighborTravelTime = neighbor.travelTime;
+
+                // current neighbor node path cost without using PP on this road
+                int costWithoutPP = currentDistance + neighborTravelTime;
+
+                // determine which state index to check for the next intersection based on whether PP has been used in the current path
                 int nextStateIndex = currentPPUsed ? 1 : 0;
+
+                // var check
+                System.err.println("  Neighbor: " + neighborIntersection + " Neighbor Travel Time: " + neighborTravelTime + " Cost without PP: " + costWithoutPP);
                 
-                if(costWithoutPP < distances[nextIntersection][nextStateIndex]) {
-                    // if this path is better than the best known path to nextIntersection without using PP
-                    distances[nextIntersection][nextStateIndex] = costWithoutPP;
-                    minHeap.offer(new State(nextIntersection, costWithoutPP, currentPPUsed));
+                // if current path cost less than saved state 
+                if(costWithoutPP < distances[neighborIntersection][nextStateIndex]) {
+                    // if this path is better than the best known path to neighborIntersection without using PP
+                    distances[neighborIntersection][nextStateIndex] = costWithoutPP;
+                    minHeap.offer(new State(neighborIntersection, costWithoutPP, currentPPUsed));
                 }
 
                 // take this road with useing PP if we haven't used it yet
                 if (!currentPPUsed) {
-                    int discountedCost = (roadTime / 2); // using PP on this road
+                    int discountedCost = (neighborTravelTime / 2); // using PP on this road
                     int costWithPP = currentDistance + discountedCost;
 
-                    if(costWithPP < distances[nextIntersection][1]) {
-                        // if this path is better than the best known path to nextIntersection with using PP
-                        distances[nextIntersection][1] = costWithPP;
-                        minHeap.offer(new State(nextIntersection, costWithPP, true));
+                    if(costWithPP < distances[neighborIntersection][1]) {
+                        // if this path is better than the best known path to neighborIntersection with using PP
+                        // update the distance for neighborIntersection with using PP
+                        distances[neighborIntersection][1] = costWithPP;
+                        minHeap.offer(new State(neighborIntersection, costWithPP, true));
                     }
                 }
+            }
+
+            // debug log to show updated distances after processing current intersection
+            System.err.println("  Updated distances:");
+            for (int i = 1; i <= n; i++) {
+                System.err.println("    dist[" + i + "][0] (no pass) = " + (distances[i][0] == Integer.MAX_VALUE ? "UNREACHABLE" : distances[i][0]) + " | dist[" + i + "][1] (with pass) = " + (distances[i][1] == Integer.MAX_VALUE ? "UNREACHABLE" : distances[i][1]));
             }
         }
 
@@ -287,14 +298,14 @@ public class Solution { // update this to "Solution" before submitting
             int w = sc.nextInt(); // with travel time w
             roadNetwork.get(u).add(new Node(v, w));
         }
-
-        Solution sol = new Solution();
+        
+        // update this to "Solution" before submitting
+        RaySolution sol = new RaySolution();
         int result = sol.dijkstra(roadNetwork, n, s, t);
         System.out.println(result);
         sc.close();
     }
 }
-
 ```
 
 ## Edge Cases
